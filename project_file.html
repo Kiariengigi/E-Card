@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Project Detail Panel</title>
+    <link rel="stylesheet" type="text/css"
+          href="/WebResources/kia_project_styles" />
+    <style>
+        .field-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .field-row:last-child { border-bottom: none; }
+        .field-label {
+            color: #555;
+            font-weight: 600;
+            min-width: 120px;
+        }
+        .field-value {
+            color: #222;
+            text-align: right;
+            flex: 1;
+        }
+        .status-active    { color: #107c10; font-weight: 700; }
+        .status-onhold    { color: #e07000; font-weight: 700; }
+        .status-completed { color: #0078d4; font-weight: 700; }
+        .last-updated {
+            font-size: 11px;
+            color: #888;
+            margin-top: 12px;
+            text-align: right;
+        }
+        .no-data {
+            color: #888;
+            font-style: italic;
+            font-size: 13px;
+            padding: 12px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="banner">Live Project Summary</div>
+
+    <div class="info-card" id="data-panel">
+        <h3>Record Details</h3>
+        <p class="no-data" id="waiting-msg">Waiting for form data...</p>
+
+        <div id="field-display" style="display:none;">
+            <div class="field-row">
+                <span class="field-label">Project Name</span>
+                <span class="field-value" id="val-name">—</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Status</span>
+                <span class="field-value" id="val-status">—</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Budget</span>
+                <span class="field-value" id="val-budget">—</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Start Date</span>
+                <span class="field-value" id="val-startdate">—</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Customer</span>
+                <span class="field-value" id="val-customer">—</span>
+            </div>
+        </div>
+
+        <p class="last-updated" id="last-updated" style="display:none;"></p>
+    </div>
+
+    <div class="info-card">
+        <h3>Status Guide</h3>
+        <p><span class="status-active">● Active</span> — In progress.</p>
+        <p><span class="status-onhold">● On Hold</span> — Awaiting input.</p>
+        <p><span class="status-completed">● Completed</span> — Signed off.</p>
+    </div>
+
+    <script>
+        window.addEventListener("message", function (event) {
+    if (!event.data || event.data.source !== "ProjectFormJS") return;
+
+    // If it's just a ping, tell the form we're ready
+    if (event.data.ping) {
+        console.log("IFRAME ready — requesting data from form");
+        window.parent.postMessage({ source: "ProjectIframe", ready: true }, "*");
+        return;
+    }
+
+    // Otherwise process the data as normal
+    document.getElementById("waiting-msg").style.display = "none";
+    document.getElementById("field-display").style.display = "block";
+    document.getElementById("last-updated").style.display = "block";
+
+    document.getElementById("val-name").textContent = event.data.projectName || "—";
+
+    var statusEl = document.getElementById("val-status");
+    statusEl.textContent = event.data.statusLabel || "—";
+    statusEl.className = "field-value";
+    if (event.data.statusLabel === "Active") statusEl.classList.add("status-active");
+    else if (event.data.statusLabel === "On Hold") statusEl.classList.add("status-onhold");
+    else if (event.data.statusLabel === "Completed") statusEl.classList.add("status-completed");
+
+    document.getElementById("val-budget").textContent =
+        event.data.budget !== null && event.data.budget !== undefined
+            ? "$" + parseFloat(event.data.budget).toLocaleString()
+            : "—";
+
+    document.getElementById("val-startdate").textContent = event.data.startDate || "—";
+    document.getElementById("val-customer").textContent = event.data.customerName || "—";
+
+    document.getElementById("last-updated").textContent =
+        "Last refreshed: " + new Date().toLocaleTimeString();
+}); 
+    </script>
+
+</body>
+</html>

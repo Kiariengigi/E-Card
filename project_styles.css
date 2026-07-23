@@ -1,0 +1,51 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f6fc;
+    margin: 0;
+    padding: 16px;
+}
+
+.banner {
+    background-color: #0078d4;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.info-card {
+    background-color: white;
+    border: 1px solid #dde3ed;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.info-card h3 {
+    margin: 0 0 8px 0;
+    color: #0078d4;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-card p {
+    margin: 0;
+    color: #444;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: #dff6dd;
+    color: #107c10;
+    margin-top: 8px;
+}
