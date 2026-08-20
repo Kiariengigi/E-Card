@@ -253,7 +253,7 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
       />
       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
         <span className="text-white text-xs font-semibold px-2 text-center pointer-events-none">
-          Click to Replace
+          Click to Replace this
         </span>
       </div>
     </div>
