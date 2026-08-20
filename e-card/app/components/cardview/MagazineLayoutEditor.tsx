@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { SlotKey, SortingState, pageOrder } from "../types";
+import { SlotKey, SortingState, pageOrder } from "../../types";
 import { supabase } from "@/lib/supabase";
 import Sqids from 'sqids'
 import { useRouter } from "next/navigation"

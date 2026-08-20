@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import MagazineLayoutEditor from "./create/page";
+import MagazineLayoutEditor from "./components/cardview/MagazineLayoutEditor";
 import Book from "./components/cardview/book";
 import { SortingState, emptySortingState } from "./types";
 
