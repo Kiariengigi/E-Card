@@ -1,26 +1,74 @@
-import React, { useRef, useState } from 'react';
+"use client"
+
+import React, { useRef, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { ReactFlipBook } from '@vuvandinh203/react-flipbook';
 import styles from './cardview.module.css';
-import img from '../../public/Assets/card-text1.png'
+import { SlotKey, pageOrder } from '../../types'
+import { supabase }  from '../../../lib/supabase'
 
-const textures = ['../../public/Assets/bart-wesolek-U2j1u4BWrpM-unsplash.jpg','../../public/Assets/olga-thelavart-vS3idIiYxX0-unsplash.jpg','../../public/Assets/resource-boy-zJBxYP-hIS8-unsplash.jpg','../../public/Assets/white-paper-texture-photo-white-card-very-high-resolution_1067001-21282.avif' ]
 
-function Book({ ref }) {
+interface BookProps { 
+  pages?: Record<SlotKey, string | null>
+  id?: string
+}
 
-  const flipBookRef = useRef(null);
+function Book({ pages: initialPages, id }: BookProps) {
+
+  const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isCoverPage, setIsCoverPage] = useState(true);
   const [isLastPage, setIsLastPage] = useState(false);
   const currentIndexRef = useRef(0);
-  const totalPages = 6;
+  const totalPages = pageOrder.length;
+
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [pages, setPages] = useState<Record<SlotKey, string | null> | null>(initialPages ?? null)
+
+  useEffect(() => {
+    if (!id) {
+      setPages(initialPages ?? null)
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    async function getCard() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('Cards')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+        if (cancelled) return 
+
+        if (error || !data) {
+          console.log("Error fetching card:", error)
+          setNotFound(true)
+        } else {
+          setPages({
+            frontPage: data.frontPage, 
+            insideLeft: data.insideLeft, 
+            insideRight: data.insideRight, 
+            backPage: data.backPage
+          })
+        }
+        setLoading(false)
+    }
+    getCard()
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, initialPages])
 
   const computeIsCover = (index: number) =>
     index === 0 || index === totalPages - 1;
 
   const computeIsLastPage = (index: number) => index === totalPages - 1;
-
-
 
   // fires in the capture phase, before the library's own click handler runs
   const handleClickCapture = (e: React.MouseEvent) => {
@@ -41,6 +89,8 @@ function Book({ ref }) {
       predictedNext = atEnd ? current - 1 : Math.max(current - 2, 0);
     }
 
+    currentIndexRef.current = predictedNext
+
     console.log(
       'click captured — side:', clickedRightHalf ? 'right' : 'left',
       '| current:', current,
@@ -53,7 +103,7 @@ function Book({ ref }) {
     setIsLastPage(computeIsLastPage(predictedNext));
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
@@ -61,8 +111,16 @@ function Book({ ref }) {
     e.currentTarget.style.setProperty('--ly', `${y}%`);
   }
 
+  if (loading) {
+    return <div className="pl-75 pt-15">Loading Card...</div>
+  }
+
+  if (notFound || !pages) {
+    return <div className='pl-75 pt-15'>Card Not Found</div>
+  }
+
   return (
-    <div ref={containerRef} onClickCapture={handleClickCapture} onMouseMove={handleMouseMove} className='pl-75 pt-25'>
+    <div ref={containerRef} onClickCapture={handleClickCapture} onMouseMove={handleMouseMove} className='pl-75 pt-15'>
       <ReactFlipBook
         width={300}
         height={500}
@@ -82,15 +140,19 @@ function Book({ ref }) {
           styles.flip_container
         )}
       >
-        <div className={styles.demoPage}>Page 1 (Cover)</div>
-        <div className={styles.demoPage}>Page 2</div>
-        <div className={styles.demoPage}>Page 3</div>
-        <div className={styles.demoPage}>Page 4</div>
-        <div className={styles.demoPage}>Page 5</div>
-        <div className={styles.demoPage}>Page 6</div>
+        {pageOrder.map((slotKey) => {
+        const src = pages[slotKey]
+        return (
+          <div key={slotKey} className={styles.demopage}>
+            {src ? (
+              <img src={src} alt={slotKey} className={styles.pageImage} />
+            ) : null}
+          </div>
+        )
+      })}
       </ReactFlipBook>
     </div>
   );
 }
 
-export default Book;
+export default Book

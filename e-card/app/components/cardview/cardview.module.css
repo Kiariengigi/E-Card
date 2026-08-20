@@ -10,7 +10,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none; 
-  background-image: url('../../public/Assets/card-text1.png');
+  background-image: url('../../../public/Assets/card-text1.png');
   background-repeat: repeat;
   background-size: 500px; /* size of one tile — tune to your image */
   mix-blend-mode: multiply; /* darkens/textures without hiding content */
@@ -31,7 +31,7 @@
   transition: background 0.15s ease-out;
 }
 
-.demoPage:nth-child(odd)::before { background-position: 10% 20%; }
+.demoPage:nth-child(odd)::before { background-position: 0% 20%; }
 .demoPage:nth-child(even)::before { background-position: 60% 80%; }
 
 .flip_container {
