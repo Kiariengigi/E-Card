@@ -23,11 +23,11 @@ interface MagazineLayoutEditorProps {
 }
 
 export default function MagazineLayoutEditor({ value, onChange, onGenerate }: MagazineLayoutEditorProps) {
-  const state = value;
+  const state = value || { slots: {}, availableImages: []};
   const router = useRouter()
 
   // All four slots need an image before there's anything to flip through
-  const allSlotsFilled = pageOrder.every((slotKey) => Boolean(state.slots[slotKey]));
+  const allSlotsFilled = pageOrder.every((slotKey) => Boolean(state?.slots?.[slotKey]));
 
   const [draggedImg, setDraggedImg] = React.useState<string | null>(null);
 
