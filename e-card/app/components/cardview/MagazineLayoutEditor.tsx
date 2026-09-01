@@ -280,7 +280,7 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
                   onClick={() => !currentImage && triggerFileInput(slotKey)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropToSlot(e, slotKey)}
-                  className={`w-full aspect-[3/4] rounded-lg border-2 transition-colors flex items-center justify-center relative overflow-hidden cursor-pointer
+                  className={`w-full aspect-3/4 rounded-lg border-2 transition-colors flex items-center justify-center relative overflow-hidden cursor-pointer
                     ${
                       draggedImg
                         ? "border-blue-400 border-dashed bg-blue-50"

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import { ReactFlipBook } from '@vuvandinh203/react-flipbook';
 import styles from './cardview.module.css';
@@ -13,18 +13,23 @@ interface BookProps {
   id?: string
 }
 
+const ASPECT_RATIO = 300 / 500;
+
 function Book({ pages: initialPages, id }: BookProps) {
 
   const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isCoverPage, setIsCoverPage] = useState(true);
   const [isLastPage, setIsLastPage] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false)
   const currentIndexRef = useRef(0);
   const totalPages = pageOrder.length;
 
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [pages, setPages] = useState<Record<SlotKey, string | null> | null>(initialPages ?? null)
+
+  const [bookSize, setBookSize] = useState({ width: 300, height: 500}); 
 
   useEffect(() => {
     if (!id) {
@@ -65,45 +70,72 @@ function Book({ pages: initialPages, id }: BookProps) {
     }
   }, [id, initialPages])
 
+  const recalcSize = useCallback(() => {
+    const el = containerRef.current; 
+    if (!el) return; 
+
+    const isMobile = window.innerWidth < 768; 
+    setIsMobileView(isMobile)
+    console.log(isMobile)
+
+    const availableWidth = el.clientWidth || window.innerWidth; 
+    const availableHeight = isMobile 
+      ? window.innerHeight * 0.72 
+      : window.innerHeight * 0.85; 
+    
+    let width: number; 
+
+    if (isMobile) {
+      width = Math.min(availableWidth * 0.92, 420);
+    } else {
+      width = Math.min(availableWidth / 2 - 24, 420)
+    }
+    let height = width / ASPECT_RATIO; 
+
+    if (height > availableHeight) {
+      height = availableHeight; 
+      width = height * ASPECT_RATIO
+    }
+
+    width = Math.max(width, 160); 
+    height = Math.max(height, width / ASPECT_RATIO)
+
+    setBookSize({ width: Math.round(width), height: Math.round(height) })
+  }, []);
+
+  useEffect(() => {
+    if (loading) return
+    recalcSize(); 
+
+    const el = containerRef.current; 
+    const resizeObserver = new ResizeObserver(() => recalcSize()); 
+    if (el) resizeObserver.observe(el); 
+
+    window.addEventListener('resize', recalcSize); 
+    window.addEventListener('orientationchange', recalcSize);
+
+    return () => {
+      resizeObserver.disconnect(); 
+      window.removeEventListener('resize', recalcSize);
+      window.removeEventListener('orientationchange', recalcSize);
+    }
+  }, [recalcSize, loading])
+
   const computeIsCover = (index: number) =>
     index === 0 || index === totalPages - 1;
 
   const computeIsLastPage = (index: number) => index === totalPages - 1;
 
   // fires in the capture phase, before the library's own click handler runs
-  const handleClickCapture = (e: React.MouseEvent) => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const clickedRightHalf = e.clientX - rect.left > rect.width / 2;
-
-    const current = currentIndexRef.current;
-    const atStart = current === 0;
-    const atEnd = current === totalPages - 1;
-
-    let predictedNext = current;
-    if (clickedRightHalf && !atEnd) {
-      predictedNext = atStart ? current + 1 : Math.min(current + 2, totalPages - 1);
-    } else if (!clickedRightHalf && !atStart) {
-      predictedNext = atEnd ? current - 1 : Math.max(current - 2, 0);
-    }
-
-    currentIndexRef.current = predictedNext
-
-    console.log(
-      'click captured — side:', clickedRightHalf ? 'right' : 'left',
-      '| current:', current,
-      '| predicted next:', predictedNext,
-      '| predicted isCover:', computeIsCover(predictedNext),
-      '| predicted isLastPage:', computeIsLastPage(predictedNext)
-    );
-
-    setIsCoverPage(computeIsCover(predictedNext));
-    setIsLastPage(computeIsLastPage(predictedNext));
-  };
+  const handleFlip = useCallback((e: { data: number }) => {
+    const newIndex = e.data; 
+    currentIndexRef.current = newIndex; 
+    setIsCoverPage(computeIsCover(newIndex)); 
+    setIsLastPage(computeIsLastPage(newIndex))
+  }, [totalPages]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     const rect = e.currentTarget.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
@@ -120,18 +152,21 @@ function Book({ pages: initialPages, id }: BookProps) {
   }
 
   return (
-    <div ref={containerRef} onClickCapture={handleClickCapture} onMouseMove={handleMouseMove} className='pl-75 pt-15'>
+    <div ref={containerRef} onMouseMove={handleMouseMove} className='flex items-center justify-center w-full min-h-[70vh] px-2 py-4 sm:px-6 sm:py-8 overflow-visible'>
       <ReactFlipBook
-        width={300}
-        height={500}
+        key={isMobileView ? 'mobile' : 'desktop'}
+        width={bookSize.width}
+        height={bookSize.height}
         size="fixed"
         maxShadowOpacity={0.5}
         showCover={true}
         mobileScrollSupport={false}
+        usePortrait={isMobileView}
         autoSize
         swipeDistance={100}
         showPageCorners={false}
         ref={flipBookRef}
+        onFlip={handleFlip}
         className={clsx(
           styles.book_control,
           !isCoverPage && styles.contentPageStyle,
