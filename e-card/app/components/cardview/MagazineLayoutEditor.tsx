@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { SlotKey, SortingState, pageOrder } from "../../types";
 import { supabase } from "@/lib/supabase";
 import Sqids from 'sqids'
-import { useRouter } from "next/navigation"
+import Book from "../cardview/book"; // adjust this path to wherever book.tsx actually lives relative to this file
 
 
 const slotLabels: Record<SlotKey, string> = {
@@ -15,33 +15,29 @@ const slotLabels: Record<SlotKey, string> = {
 };
 
 interface MagazineLayoutEditorProps {
-  // The single source of truth now lives with the parent (see BookEditorPage.tsx)
   value: SortingState;
   onChange: (next: SortingState) => void;
-  // Called when the user clicks "Generate & View Card"
   onGenerate?: () => void;
 }
 
 export default function MagazineLayoutEditor({ value, onChange, onGenerate }: MagazineLayoutEditorProps) {
   const state = value || { slots: {}, availableImages: []};
-  const router = useRouter()
 
-  // All four slots need an image before there's anything to flip through
   const allSlotsFilled = pageOrder.every((slotKey) => Boolean(state?.slots?.[slotKey]));
 
   const [draggedImg, setDraggedImg] = React.useState<string | null>(null);
-
-  // Files are keyed by their blob URL (not by slot), so the File object
-  // travels with the image no matter how it gets dragged around between
-  // slots / the pool.
   const [fileMap, setFileMap] = React.useState<Record<string, File>>({});
-
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Holds the just-generated card so we can render it in place — no navigation.
+  const [generatedCard, setGeneratedCard] = useState<{
+    id: string;
+    pages: Record<SlotKey, string>;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeSlotRef = useRef<SlotKey | "pool" | null>(null);
 
-  // --- Local File Upload & Preview Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,7 +78,6 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
     fileInputRef.current?.click();
   };
 
-  // --- Internal Drag Handlers ---
   const handleDragStart = (e: React.DragEvent, imgPath: string) => {
     setDraggedImg(imgPath);
     e.dataTransfer.effectAllowed = "move";
@@ -141,7 +136,6 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
     setDraggedImg(null);
   }
 
-  // --- Upload + Save ---
   async function uploadCardImage(file: File, path: string) {
     const { data, error } = await supabase.storage
       .from('Card_Img')
@@ -193,7 +187,6 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
     setIsSubmitting(true);
     try {
       const sqids = new Sqids({ minLength: 10 });
-      // Random seed per card so every card gets a unique id
       const id = sqids.encode([Date.now(), Math.floor(Math.random() * 100000)]);
 
       const uploads = await Promise.all(
@@ -220,22 +213,25 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
         return;
       }
 
-    const result = await createCardRecord({
+      // Save in the background — purely so /cards/[id] works later as a
+      // shareable, direct link. Doesn't affect what's shown right now.
+      createCardRecord({
         id,
-        num_Page: 9,
+        num_Page: pageOrder.length,
         frontPage: urls.frontPage as string,
         insideLeft: urls.insideLeft as string,
         insideRight: urls.insideRight as string,
         backPage: urls.backPage as string,
-      });
-    if (result) {
-      router.push(`/cards/${id}`)
-    }
+      }).catch((e) => console.log("Background card save failed", e));
+
+      // No navigation. Render the card right here with the data we already have.
+      setGeneratedCard({ id, pages: urls as Record<SlotKey, string> });
+    } catch (e) {
+      console.log("Error creating card", e);
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   const renderDraggableImage = (imgPath: string, clickTarget: SlotKey | "pool") => (
     <div
@@ -258,6 +254,18 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
       </div>
     </div>
   );
+
+  // Once generated, just show the card — no navigation, this is the final state.
+  if (generatedCard) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-4">
+        <Book pages={generatedCard.pages} />
+        <p className="text-xs text-gray-400">
+          Shareable link: {typeof window !== "undefined" ? window.location.origin : ""}/cards/{generatedCard.id}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
@@ -301,7 +309,6 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
           })}
         </div>
 
-        {/* Optional: a pool area for images not currently assigned to a slot */}
         {state.availableImages.length > 0 && (
           <div
             onDragOver={handleDragOver}
