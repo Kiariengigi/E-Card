@@ -43,7 +43,7 @@ function Book({ pages: initialPages, id }: BookProps) {
     async function getCard() {
       setLoading(true)
       const { data, error } = await supabase
-        .from('Cards')
+        .from('cards')
         .select('*')
         .eq('id', id)
         .single()

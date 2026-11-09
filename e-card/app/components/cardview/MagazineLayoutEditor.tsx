@@ -18,7 +18,7 @@ interface MagazineLayoutEditorProps {
   value: SortingState;
   onChange: (next: SortingState) => void;
   onGenerate?: () => void;
-}
+}   
 
 export default function MagazineLayoutEditor({ value, onChange, onGenerate }: MagazineLayoutEditorProps) {
   const state = value || { slots: {}, availableImages: []};
@@ -165,7 +165,7 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
     backPage: string
   }) {
     const { data, error } = await supabase
-      .from('Cards')
+      .from('cards')
       .insert([cardData])
       .select()
 
