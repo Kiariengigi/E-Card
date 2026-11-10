@@ -4,7 +4,8 @@ import React, { useRef, useState } from "react";
 import { SlotKey, SortingState, pageOrder } from "../../types";
 import { supabase } from "@/lib/supabase";
 import Sqids from 'sqids'
-import Book from "../cardview/book"; // adjust this path to wherever book.tsx actually lives relative to this file
+import Book from "../cardview/book"; 
+import CardScreen from "../cardview/CardScreen"
 
 
 const slotLabels: Record<SlotKey, string> = {
@@ -28,6 +29,9 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
   const [draggedImg, setDraggedImg] = React.useState<string | null>(null);
   const [fileMap, setFileMap] = React.useState<Record<string, File>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const [isOpeningEdit, setIsOpeningEdit] = useState(false); 
+  const [editError, setEditError] = useState<string | null>(null); 
 
   // Holds the just-generated card so we can render it in place — no navigation.
   const [generatedCard, setGeneratedCard] = useState<{
@@ -215,14 +219,19 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
 
       // Save in the background — purely so /cards/[id] works later as a
       // shareable, direct link. Doesn't affect what's shown right now.
-      createCardRecord({
+      const saved = await createCardRecord({
         id,
         num_Page: pageOrder.length,
         frontPage: urls.frontPage as string,
         insideLeft: urls.insideLeft as string,
         insideRight: urls.insideRight as string,
         backPage: urls.backPage as string,
-      }).catch((e) => console.log("Background card save failed", e));
+      });
+
+      if (!saved) {
+        console.log("Card record failed to save"); 
+        return
+      }
 
       // No navigation. Render the card right here with the data we already have.
       setGeneratedCard({ id, pages: urls as Record<SlotKey, string> });
@@ -255,17 +264,9 @@ export default function MagazineLayoutEditor({ value, onChange, onGenerate }: Ma
     </div>
   );
 
-  // Once generated, just show the card — no navigation, this is the final state.
   if (generatedCard) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center gap-4">
-        <Book pages={generatedCard.pages} />
-        <p className="text-xs text-gray-400">
-          Shareable link: {typeof window !== "undefined" ? window.location.origin : ""}/cards/{generatedCard.id}
-        </p>
-      </div>
-    );
-  }
+    return <CardScreen id={generatedCard.id} pages={generatedCard.pages}/>
+}
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans text-gray-800">
